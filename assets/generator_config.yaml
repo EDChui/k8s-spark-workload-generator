@@ -1,0 +1,22 @@
+seed: 42
+delete_after_seconds: 60
+status_poll_seconds: 10
+
+scale: 1
+queries:
+  - q3-v2.4
+  - q64-v2.4
+  - q70-v2.4
+  - q82-v2.4
+
+workloads:
+  - amount: 100
+    iat_seconds: 60
+  - amount: 200
+    iat_seconds: 30
+  - amount: 200
+    iat_seconds: 15
+  - amount: 200
+    iat_seconds: 30
+  - amount: 100
+    iat_seconds: 60

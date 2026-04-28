@@ -1,0 +1,24 @@
+k8s_api: https://192.168.134.2:6443
+service_account: spark
+namespace: default
+image: elliesgood00/tpcds-image:v17
+class_name: ParquetGenerator
+host_tpcds_dir: /mnt/tpcds/tpcds-baseline
+container_tpcds_dir: /tpcds-data
+wait_app_completion: false
+
+driver_config:
+  cores: 1
+  k8s_request_cores: 1
+  k8s_limit_cores: 1
+  memory: 2g
+  memory_overhead: 512m
+
+executor_config:
+  instances: 1
+  cores: 1
+  k8s_request_cores: 1
+  k8s_limit_cores: 1
+  memory: 2g
+  memory_overhead: 512m
+  delete_on_termination: true
