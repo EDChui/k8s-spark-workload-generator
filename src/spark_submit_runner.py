@@ -38,6 +38,7 @@ class SparkSubmitConfig:
     class_name: str             = "ParquetGenerator"
     host_dir: str               = "/mnt/tpcds/tpcds-baseline"
     container_dir: str          = "/tpcds-data"
+    metastore_dir: str          = f"/tpcds-data/metastore_db"
     wait_app_completion: bool   = False
     driver_config: SparkDriverConfig = SparkDriverConfig()
     executor_config: SparkExecutorConfig = SparkExecutorConfig()
@@ -58,6 +59,7 @@ def load_spark_submit_config(config_path: Path) -> SparkSubmitConfig:
         class_name=config_dict.get("class_name", "ParquetGenerator"),
         host_dir=config_dict.get("host_dir", "/mnt/tpcds/tpcds-baseline"),
         container_dir=config_dict.get("container_dir", "/tpcds-data"),
+        metastore_dir=config_dict.get("metastore_dir", f"{config_dict.get('container_dir', '/tpcds-data')}/metastore_db"),
         wait_app_completion=config_dict.get("wait_app_completion", False),
         driver_config=driver_config,
         executor_config=executor_config
@@ -137,7 +139,7 @@ class SparkSubmitRunner:
         self._add_conf(args, "spark.executor.memoryOverhead", config.executor_config.memory_overhead)
 
         self._add_conf(args, "spark.sql.catalogImplementation", "hive")
-        self._add_conf(args, "spark.hadoop.javax.jdo.option.ConnectionURL", f"jdbc:derby:;databaseName={config.container_dir}/metastore_db;create=true")
+        self._add_conf(args, "spark.hadoop.javax.jdo.option.ConnectionURL", f"jdbc:derby:;databaseName={config.metastore_dir};create=true")
         self._add_conf(args, "spark.hadoop.javax.jdo.option.ConnectionDriverName", "org.apache.derby.jdbc.EmbeddedDriver")
         self._add_conf(args, "spark.sql.warehouse.dir", f"{config.container_dir}/hive-warehouse")
         self._add_conf(args, "spark.eventLog.enabled", "true")

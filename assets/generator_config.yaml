@@ -20,3 +20,12 @@ workloads:
     iat_seconds: 30
   - amount: 100
     iat_seconds: 60
+
+# These metastore_dirs are used to solve the error "ERROR XSDB6: Another instance of Derby may have already booted the database /tpcds-data/metastore_db"
+# This override the spark submit config's metastore_dir
+metastore_dirs:
+  - /tpcds-data/metastore_db_1
+  - /tpcds-data/metastore_db_2
+  - /tpcds-data/metastore_db_3
+  - /tpcds-data/metastore_db_4
+  - /tpcds-data/metastore_db_5

@@ -2,7 +2,7 @@ import logging
 import random
 import time
 import yaml
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
@@ -28,6 +28,7 @@ class TPCDSGeneratorConfig:
     scale: int
     queries: List[str]
     workloads: List[WorkloadStage]
+    metastore_dirs: Optional[List[str]] = None
 
 
 def load_generator_config(config_path: Path) -> TPCDSGeneratorConfig:
@@ -42,6 +43,7 @@ def load_generator_config(config_path: Path) -> TPCDSGeneratorConfig:
         scale=config_data["scale"],
         queries=config_data["queries"],
         workloads=workloads,
+        metastore_dirs=config_data.get("metastore_dirs"),
     )
 
 
@@ -127,18 +129,31 @@ class TPCDSWorkloadGenerator:
     
     def run_poisson(self, spark_submit_config: SparkSubmitConfig, generator_config: TPCDSGeneratorConfig):
         rng = random.Random(generator_config.seed)
+        metastore_dirs = generator_config.metastore_dirs or [None]
+        total_launch_count = 0
 
         for stage_idx, stage in enumerate(generator_config.workloads):
             logger.info(f"Starting workload stage {stage_idx + 1}/{len(generator_config.workloads)}: {stage.amount} queries with mean IAT {stage.iat_seconds} seconds")
             for launch_idx in range(stage.amount):
                 query = rng.choice(generator_config.queries)
+                
+                # Select a metastore_dir for this launch to solve the error "ERROR XSDB6: Another instance of Derby may have already booted the database /tpcds-data/metastore_db"
+                # TODO: Remove this workaround
+                metastore_dir = metastore_dirs[total_launch_count % len(metastore_dirs)]
+                if metastore_dir is None:
+                    logger.debug("No metastore_dir configured for this stage, using default Spark configuration")
+                else:
+                    spark_submit_config = replace(spark_submit_config, metastore_dir=metastore_dir)
+
+                # Launch the Spark job for the selected query
                 self.runner.run_query(spark_submit_config, generator_config.scale, query, repeat=1)
+                total_launch_count += 1
+                logger.info(f"Launched {launch_idx + 1}/{stage.amount} of stage {stage_idx + 1}: query={query}")
+
                 self._check_and_delete_completed_driver_pods(
                     namespace=spark_submit_config.namespace,
                     delete_after_seconds=generator_config.delete_after_seconds,
                 )
-
-                logger.info(f"Launched {launch_idx + 1}/{stage.amount} of stage {stage_idx + 1}: query={query}")
                 
                 if launch_idx < stage.amount - 1:
                     inter_arrival_seconds = rng.expovariate(1.0 / stage.iat_seconds)

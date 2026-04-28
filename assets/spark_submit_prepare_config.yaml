@@ -6,7 +6,7 @@ class_name: ParquetGenerator
 host_dir: /mnt/tpcds/tpcds-baseline
 container_dir: /tpcds-data
 metastore_dir: /tpcds-data/metastore_db
-wait_app_completion: false
+wait_app_completion: true
 
 driver_config:
   cores: 1

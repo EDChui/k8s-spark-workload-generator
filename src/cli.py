@@ -1,10 +1,12 @@
 import click
+import shutil
 import logging
 from pathlib import Path
 
 from spark_submit_runner import SparkSubmitRunner, load_spark_submit_config
 from tpcds_workload_generator import TPCDSWorkloadGenerator, load_generator_config
 
+DEFAULT_SPARK_PREPARE_CONFIG_PATH = "assets/spark_submit_prepare_config.yaml"
 DEFAULT_SPARK_CONFIG_PATH = "assets/spark_submit_config.yaml"
 DEFAULT_GENERATOR_CONFIG_PATH = "assets/generator_config.yaml"
 DEFAULT_SPARK_HOME = "/home/cloud_controller_echui/spark-3.4.4-bin-hadoop3"
@@ -24,7 +26,7 @@ def cli():
 
 
 @cli.command()
-@click.option("--config", required=True, default=DEFAULT_SPARK_CONFIG_PATH, help="Path to the YAML configuration file")
+@click.option("--config", required=True, default=DEFAULT_SPARK_PREPARE_CONFIG_PATH, help="Path to the YAML configuration file")
 @click.option("--spark-home", required=True, default=DEFAULT_SPARK_HOME, help="Path to the Spark installation directory")
 @click.option("--scale", required=True, default=1, help="Scale factor for TPC-DS data")
 def datagen(config: str, spark_home: str, scale: int) -> int:
@@ -42,7 +44,7 @@ def datagen(config: str, spark_home: str, scale: int) -> int:
 
 
 @cli.command()
-@click.option("--config", required=True, default=DEFAULT_SPARK_CONFIG_PATH, help="Path to the YAML configuration file")
+@click.option("--config", required=True, default=DEFAULT_SPARK_PREPARE_CONFIG_PATH, help="Path to the YAML configuration file")
 @click.option("--spark-home", required=True, default=DEFAULT_SPARK_HOME, help="Path to the Spark installation directory")
 @click.option("--scale", required=True, default=1, help="Scale factor for TPC-DS data")
 def metagen(config: str, spark_home: str, scale: int) -> int:
@@ -56,6 +58,32 @@ def metagen(config: str, spark_home: str, scale: int) -> int:
     
     spark_submit_runner.run_metagen(spark_submit_config, scale)
     click.echo("Metadata generation submitted successfully.")
+    return 0
+
+
+@cli.command()
+@click.option("--origin-metastore", required=True, default="/mnt/tpcds/tpcds-baseline/metastore_db", help="Path to the original metastore_db directory to copy from")
+@click.option("--amount", required=True, type=click.INT, help="Number of copies to create")
+def prepare_metastores(origin_metastore: str, amount: int) -> int:
+    origin_path = Path(origin_metastore)
+    if not origin_path.exists():
+        click.echo(f"Original metastore_db directory not found at {origin_path}")
+        return 1
+    
+    for i in range(amount):
+        dest_path = origin_path.parent / f"metastore_db_{i+1}"
+        if dest_path.exists():
+            click.echo(f"Destination path {dest_path} already exists, skipping copy")
+            continue
+        
+        try:
+            shutil.copytree(origin_path, dest_path)
+            click.echo(f"Copied {origin_path} to {dest_path}")
+        except Exception as e:
+            click.echo(f"Error copying to {dest_path}: {e}")
+            return 1
+    
+    click.echo("Metastore preparation completed successfully.")
     return 0
 
 
@@ -101,7 +129,7 @@ def poisson(spark_config: str, generator_config: str, spark_home: str) -> int:
     workload_generator = TPCDSWorkloadGenerator(runner=spark_submit_runner)
     
     workload_generator.run_poisson(spark_submit_config, generator_config)
-    click.echo("TPC-DS workload generation started successfully.")
+    click.echo("TPC-DS workload generation completed successfully.")
     return 0
 
 
