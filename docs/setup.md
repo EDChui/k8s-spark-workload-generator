@@ -75,12 +75,6 @@ kubectl auth can-i create configmaps --as=system:serviceaccount:default:spark
 
 All three `kubectl auth` shall return `yes`.
 
-## Executor Priority
-
-```bash
-kubectl apply -f assets/setup/spark_executor_priorityclass.yaml
-```
-
 ## Install Spark Submit Client
 
 ```bash
