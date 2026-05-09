@@ -1,13 +1,48 @@
+k8s_api: https://192.168.134.2:6443
+service_account: spark
+namespace: default
+image: elliesgood00/tpcds-image:v17
+class_name: ParquetGenerator
+host_dir: /mnt/tpcds/tpcds-baseline
+container_dir: /tpcds-data
+metastore_dir: /tpcds-data/metastore_db
+wait_app_completion: false
+
+# Default Spark submit configuration for all queries, can be overridden by query-specific config
+driver_config:
+  cores: 1
+  k8s_request_cores: 1
+  k8s_limit_cores: 1
+  memory: 2g
+  memory_overhead: 512m
+
+executor_config:
+  instances: 1
+  cores: 1
+  k8s_request_cores: 1
+  k8s_limit_cores: 1
+  memory: 2g
+  memory_overhead: 512m
+  delete_on_termination: true
+
 seed: 42
 delete_after_seconds: 60
 status_poll_seconds: 10
 
 scale: 1
 queries:
-  - q3-v2.4
-  - q64-v2.4
-  - q70-v2.4
-  - q82-v2.4
+  - name: q3-v2.4
+  - name: q64-v2.4
+    executor_config:
+      instances: 1
+      cores: 2
+      k8s_request_cores: 2
+      k8s_limit_cores: 2
+      memory: 2g
+      memory_overhead: 512m
+      delete_on_termination: true
+  - name: q70-v2.4
+  - name: q82-v2.4
 
 workloads:
   - amount: 100

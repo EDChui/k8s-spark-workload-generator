@@ -39,7 +39,7 @@ sudo chown -R --reference=metastore_db metastore_db_1
 Command to run the TPC-DS data generator:
 
 ```bash
-python3 src/cli.py poisson --spark-config assets/spark_submit_config.yaml --generator-config assets/generator_config.yaml
+python3 src/cli.py poisson --generator-config assets/generator_config.yaml
 ```
 
 # Keywords

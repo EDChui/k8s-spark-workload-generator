@@ -108,21 +108,16 @@ def query(config: str, spark_home: str, scale: int, query: str, repeat: int) -> 
 
 
 @cli.command()
-@click.option("--spark-config", required=True, default=DEFAULT_SPARK_CONFIG_PATH, help="Path to the Spark submit YAML configuration file")
 @click.option("--generator-config", required=True, default=DEFAULT_GENERATOR_CONFIG_PATH, help="Path to the TPC-DS workload generator YAML configuration file")
 @click.option("--spark-home", required=True, default=DEFAULT_SPARK_HOME, help="Path to the Spark installation directory")
-def poisson(spark_config: str, generator_config: str, spark_home: str) -> int:
-    spark_config_path = Path(spark_config)
+def poisson(generator_config: str, spark_home: str) -> int:
     generator_config_path = Path(generator_config)
 
-    if not spark_config_path.exists():
-        click.echo(f"Spark configuration file not found at {spark_config_path}")
-        return 1
     if not generator_config_path.exists():
         click.echo(f"Generator configuration file not found at {generator_config_path}")
         return 1
     
-    spark_submit_config = load_spark_submit_config(spark_config_path)
+    spark_submit_config = load_spark_submit_config(generator_config_path)
     generator_config = load_generator_config(generator_config_path)
     
     spark_submit_runner = SparkSubmitRunner(spark_home=Path(spark_home))

@@ -9,10 +9,15 @@ from kubernetes.client.rest import ApiException
 from pathlib import Path
 from typing import List, Optional
 
-from spark_submit_runner import SparkSubmitRunner, SparkSubmitConfig
+from spark_submit_runner import SparkSubmitRunner, SparkSubmitConfig, SparkDriverConfig, SparkExecutorConfig
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class QueryConfig:
+    name: str
+    driver_config: Optional[SparkDriverConfig] = None
+    executor_config: Optional[SparkExecutorConfig] = None
 
 @dataclass
 class WorkloadStage:
@@ -26,9 +31,17 @@ class TPCDSGeneratorConfig:
     delete_after_seconds: int
     status_poll_seconds: int
     scale: int
-    queries: List[str]
+    queries: List[QueryConfig]
     workloads: List[WorkloadStage]
     metastore_dirs: Optional[List[str]] = None
+
+
+def load_query_config(query_data: dict) -> QueryConfig:
+    return QueryConfig(
+        name=query_data["name"],
+        driver_config=SparkDriverConfig(**query_data.get("driver_config", {})) if query_data.get("driver_config") else None,
+        executor_config=SparkExecutorConfig(**query_data.get("executor_config", {})) if query_data.get("executor_config") else None
+    )
 
 
 def load_generator_config(config_path: Path) -> TPCDSGeneratorConfig:
@@ -36,12 +49,13 @@ def load_generator_config(config_path: Path) -> TPCDSGeneratorConfig:
         config_data = yaml.safe_load(f)
 
     workloads = [WorkloadStage(**stage) for stage in config_data["workloads"]]
+    queries = [load_query_config(query) for query in config_data["queries"]]
     return TPCDSGeneratorConfig(
         seed=config_data["seed"],
         delete_after_seconds=config_data["delete_after_seconds"],
         status_poll_seconds=config_data["status_poll_seconds"],
         scale=config_data["scale"],
-        queries=config_data["queries"],
+        queries=queries,
         workloads=workloads,
         metastore_dirs=config_data.get("metastore_dirs"),
     )
@@ -145,10 +159,19 @@ class TPCDSWorkloadGenerator:
                 else:
                     spark_submit_config = replace(spark_submit_config, metastore_dir=metastore_dir)
 
+                # Override the Spark submit config with the query-specific config
+                if query.driver_config or query.executor_config:
+                    logger.debug(f"Overriding Spark submit config for query {query.name} with driver_config={query.driver_config} and executor_config={query.executor_config}")
+                    spark_submit_config = replace(
+                        spark_submit_config,
+                        driver_config=query.driver_config or spark_submit_config.driver_config,
+                        executor_config=query.executor_config or spark_submit_config.executor_config,
+                    )
+
                 # Launch the Spark job for the selected query
-                self.runner.run_query(spark_submit_config, generator_config.scale, query, repeat=1)
+                self.runner.run_query(spark_submit_config, generator_config.scale, query.name, repeat=1)
                 total_launch_count += 1
-                logger.info(f"Launched {launch_idx + 1}/{stage.amount} of stage {stage_idx + 1}: query={query}")
+                logger.info(f"Launched {launch_idx + 1}/{stage.amount} of stage {stage_idx + 1}: query={query.name}")
 
                 self._check_and_delete_completed_driver_pods(
                     namespace=spark_submit_config.namespace,
