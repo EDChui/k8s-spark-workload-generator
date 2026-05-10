@@ -8,6 +8,8 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+EXECUTOR_POD_TEMPLATE_PATH =  Path("assets/setup/executor_pod_template.yaml").resolve()
+
 
 @dataclass
 class SparkDriverConfig:
@@ -154,6 +156,8 @@ class SparkSubmitRunner:
         self._add_conf(args, "spark.kubernetes.executor.volumes.hostPath.tpcds.mount.readOnly", "false")
         self._add_conf(args, "spark.kubernetes.executor.volumes.hostPath.tpcds.options.path", config.host_dir)
         self._add_conf(args, "spark.kubernetes.executor.volumes.hostPath.tpcds.options.type", "Directory")
+
+        self._add_conf(args, "spark.kubernetes.executor.podTemplateFile", str(EXECUTOR_POD_TEMPLATE_PATH))
 
         args.extend([
             "--jars", "local:///opt/tpcds/lib/spark-sql-perf_2.12-0.5.1-SNAPSHOT.jar",
