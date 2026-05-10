@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 spec:
-  priorityClassName: spark-executor-high
+  priorityClassName: spark-executor-nonpreempting-high
   containers:
     - name: spark-kubernetes-executor
       image: will-be-overwritten

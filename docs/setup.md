@@ -78,6 +78,7 @@ All three `kubectl auth` shall return `yes`.
 ## Executor Priority
 
 ```bash
+kubectl apply -f assets/setup/spark_driver_priorityclass.yaml
 kubectl apply -f assets/setup/spark_executor_priorityclass.yaml
 ```
 

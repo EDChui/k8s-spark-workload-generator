@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Pod
+spec:
+  priorityClassName: spark-driver-low
+  containers:
+    - name: spark-kubernetes-driver
+      image: will-be-overwritten
